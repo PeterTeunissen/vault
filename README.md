@@ -2,7 +2,7 @@
 The Vault
 =========
 
-An attempt at a tamper proof Auditing sollution.
+An attempt at a tamper proof Auditing solution.
 
 Prerequisites for Development
 -------------------------------------
@@ -36,7 +36,7 @@ following steps:
 2. Enter the following Maven command:
 
 ```
-mvn package install -DskiptTests
+mvn package install 
 ```
 
 This Maven command builds the application as an embedded web application.

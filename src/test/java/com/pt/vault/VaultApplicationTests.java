@@ -1,4 +1,4 @@
-package com.cerner.vault;
+package com.pt.vault;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -56,6 +56,7 @@ public class VaultApplicationTests {
 	@Test
 	public void testHashRepo() {
 		HashBucket b = new HashBucket();
+		b.setBucketSize(10);
 		b.setBucketLevel(2L);
 		b.setId(10L);
 
@@ -78,7 +79,7 @@ public class VaultApplicationTests {
 			System.out.println(hb.toString());
 		}
 
-		b.addEntry(30L, "h3");
+		b.addEntry(40L, "h4");
 		hRepo.save(b);
 
 		for (HashBucket hb : hRepo.findAll()) {
