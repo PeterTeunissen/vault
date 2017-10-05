@@ -1,0 +1,1 @@
+java -jar  %userprofile%\.m2\repository\com\h2database\h2\1.4.196\h2-1.4.196.jar -user sa -url jdbc:h2:./h2.db

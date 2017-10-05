@@ -1,0 +1,34 @@
+
+Logic when adding to the root levels:
+
+add (oid, hash, level)
+
+
+find last bucket for level 
+  - found:
+    add oid and hash to it
+      if overflow ?
+        make sibling        
+		add oid and hash to sibling
+	    recalculate subling's hash
+
+        does last bucket have a parent?
+          no has no parent:       
+            make parent
+            point last bucket to parent
+            add last buckets' info to parent
+    		add siblings' info the parent
+          yes has a parent:
+            parent = add(sibling.oid, sibling.hash, level+1)
+	        point new sibling bucket to parent
+
+	  no overflow:				      
+	    recalculate it's hash
+    bubble up the master hashes
+    
+  - not found:
+    make a new bucket
+    add oid and hash to it
+    recalculate it's hash
+       
+    

@@ -1,0 +1,1 @@
+java -DbucketSize=100 -Xnoagent -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=9091   -jar target\vault-0.0.1-SNAPSHOT.jar
