@@ -2,6 +2,7 @@ package com.pt.vault;
 
 import java.util.List;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -14,6 +15,7 @@ import com.pt.vault.data.AuditRecord;
 import com.pt.vault.data.HashBucket;
 import com.pt.vault.repo.AuditRecordRepository;
 import com.pt.vault.repo.HashBucketRepository;
+import com.pt.vault.repo.SequenceGenRepo;
 import com.pt.vault.repo.TheVaultImpl;
 
 @WebAppConfiguration
@@ -30,10 +32,15 @@ public class VaultTests {
 	@Autowired
 	private TheVaultImpl vault;
 
+	@Autowired
+	private SequenceGenRepo sRepo;
+
 	@Before
+	@After
 	public void cleanup() {
 		aRepo.deleteAll();
 		hRepo.deleteAll();
+		sRepo.deleteAll();
 	}
 
 	@Test

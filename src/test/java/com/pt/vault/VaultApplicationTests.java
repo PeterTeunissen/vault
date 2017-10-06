@@ -1,5 +1,6 @@
 package com.pt.vault;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,9 +35,11 @@ public class VaultApplicationTests {
 	private SequenceGenDAO sDao;
 
 	@Before
+	@After
 	public void cleanup() {
 		aRepo.deleteAll();
 		hRepo.deleteAll();
+		sRepo.deleteAll();
 	}
 
 	@Test

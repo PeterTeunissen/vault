@@ -12,6 +12,8 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 public class HashBucket extends VerifyableRecord {
 
@@ -120,6 +122,7 @@ public class HashBucket extends VerifyableRecord {
 				+ ((siblingHashBucketOID == null) ? "<null>" : siblingHashBucketOID);
 	}
 
+	@JsonIgnore
 	public List<Long> getReferencedOIDs() {
 		List<Long> oids = new ArrayList<Long>();
 		try {
