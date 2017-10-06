@@ -28,16 +28,7 @@ public class HashBucket extends VerifyableRecord {
 	@Column(length = 8000)
 	private String records = "{ }";
 	private Long parentHashBucketOID;
-	private Long siblingHashBucketOID;
 	private String recordType = SEQ_GEN_KEY;
-
-	public Long getSiblingHashBucketOID() {
-		return siblingHashBucketOID;
-	}
-
-	public void setSiblingHashBucketOID(Long siblingHashBucketOID) {
-		this.siblingHashBucketOID = siblingHashBucketOID;
-	}
 
 	public String getRecordType() {
 		return recordType;
@@ -118,8 +109,7 @@ public class HashBucket extends VerifyableRecord {
 	public String toString() {
 		return "HB ID=" + id + ",Level=" + bucketLevel + ",size=" + bucketSize + ",used=" + entriesUsed + ",records="
 				+ records + ",hashValue=" + getHashValue() + ",parentHashBucketOID="
-				+ ((parentHashBucketOID == null) ? "<null>" : parentHashBucketOID) + ",siblingHashBucket="
-				+ ((siblingHashBucketOID == null) ? "<null>" : siblingHashBucketOID);
+				+ ((parentHashBucketOID == null) ? "<null>" : parentHashBucketOID);
 	}
 
 	@JsonIgnore

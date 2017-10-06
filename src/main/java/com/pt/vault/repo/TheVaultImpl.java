@@ -111,13 +111,6 @@ public class TheVaultImpl implements TheVault {
 				}
 			}
 
-			if (hb.getSiblingHashBucketOID() != null) {
-				if (!hRepo.hashBucketExists(hb.getSiblingHashBucketOID())) {
-					checkResult
-							.add("Hash Bucket references a sibling Hash Bucket that does not exist!! " + hb.toString());
-				}
-			}
-
 			List<Long> oids = hb.getReferencedOIDs();
 
 			if (hb.getBucketLevel() == null) {
