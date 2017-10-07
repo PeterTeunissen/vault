@@ -1,5 +1,5 @@
 echo on
 
-call mvn install package -DskipTests
+call mvn install package 
 
-call java -DbucketSize=100 -jar target\vault-0.0.1-SNAPSHOT.jar
+call java  -jar target\vault-0.0.1-SNAPSHOT.jar

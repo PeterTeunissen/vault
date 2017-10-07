@@ -7,7 +7,6 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.test.context.web.WebAppConfiguration;
 
 import com.pt.vault.data.AuditRecord;
 import com.pt.vault.data.HashBucket;
@@ -16,8 +15,8 @@ import com.pt.vault.repo.AuditRecordRepository;
 import com.pt.vault.repo.HashBucketRepository;
 import com.pt.vault.repo.SequenceGenDAO;
 import com.pt.vault.repo.SequenceGenRepo;
+import com.pt.vault.repo.TheVault;
 
-@WebAppConfiguration
 @RunWith(SpringRunner.class)
 @SpringBootTest
 public class VaultApplicationTests {
@@ -33,6 +32,9 @@ public class VaultApplicationTests {
 
 	@Autowired
 	private SequenceGenDAO sDao;
+
+	@Autowired
+	private TheVault vault;
 
 	@Before
 	@After
@@ -125,5 +127,13 @@ public class VaultApplicationTests {
 			System.out.println(g2.toString());
 		}
 		System.out.println("----------------");
+	}
+
+	@Test
+	public void testVault() throws Exception {
+		AuditRecord ar = new AuditRecord();
+		ar.setD1("Car");
+		Long r = vault.insertAuditRecord(ar);
+		System.out.println(r);
 	}
 }

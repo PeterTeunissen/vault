@@ -151,6 +151,15 @@ public class HashBucket extends VerifyableRecord {
 
 	}
 
+	public String getHashValueOfOid(Long oid) {
+		try {
+			JSONObject o = new JSONObject(records);
+			return o.getString(String.valueOf(oid));
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 	private void updateEntry(Long oid, String h, boolean failIfExists) {
 		try {
 			JSONObject o = new JSONObject(records);
@@ -208,6 +217,7 @@ public class HashBucket extends VerifyableRecord {
 		while (i.hasNext()) {
 			Object rec = i.next();
 			String hash = o.getString((String) rec);
+			bldr.append((String) rec);
 			bldr.append(hash);
 		}
 	}

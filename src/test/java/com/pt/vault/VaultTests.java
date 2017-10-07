@@ -13,6 +13,7 @@ import org.springframework.test.context.web.WebAppConfiguration;
 
 import com.pt.vault.data.AuditRecord;
 import com.pt.vault.data.HashBucket;
+import com.pt.vault.data.TamperError;
 import com.pt.vault.repo.AuditRecordRepository;
 import com.pt.vault.repo.HashBucketRepository;
 import com.pt.vault.repo.SequenceGenRepo;
@@ -52,7 +53,7 @@ public class VaultTests {
 		Long id = vault.insertAuditRecord(ar);
 
 		// Check should pass
-		List<String> errors = vault.checkForTampering();
+		List<TamperError> errors = vault.checkForTampering();
 		System.out.println(errors);
 		assert errors.isEmpty() == true;
 
@@ -77,7 +78,7 @@ public class VaultTests {
 		Long id = vault.insertAuditRecord(ar);
 
 		// Check should pass
-		List<String> errors = vault.checkForTampering();
+		List<TamperError> errors = vault.checkForTampering();
 		System.out.println(errors);
 		assert errors.isEmpty() == true;
 

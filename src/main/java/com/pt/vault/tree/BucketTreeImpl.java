@@ -30,7 +30,7 @@ public class BucketTreeImpl implements BucketTree {
 	private Long addEntry(BucketTreeUpdateInfo updateInfo, Long oid, String hashValue, Long level, HashEngine he)
 			throws IllegalStateException, UnsupportedEncodingException {
 
-		HashBucket hb = hRepo.getLastBucketForLevel(level);
+		HashBucket hb = getMaxBucketForLevel(updateInfo, level);
 
 		if (hb == null) {
 			hb = new HashBucket();
@@ -46,6 +46,7 @@ public class BucketTreeImpl implements BucketTree {
 			hb.addEntry(oid, hashValue);
 			hb.setHashValue(hb.getEncryptedHashValue(he));
 			updateInfo.setChangedBucket(hb);
+			bubbleUpChange(updateInfo, hb, he);
 			return hb.getId();
 		} else {
 			HashBucket sibling = new HashBucket();
@@ -61,7 +62,6 @@ public class BucketTreeImpl implements BucketTree {
 				parent.setBucketLevel(level + 1);
 				parent.addEntry(hb.getId(), hb.getHashValue());
 				parent.addEntry(sibling.getId(), sibling.getHashValue());
-				// The final rehash will take care of this
 				parent.setHashValue(parent.getEncryptedHashValue(he));
 				sibling.setParentHashBucketOID(parent.getId());
 				hb.setParentHashBucketOID(parent.getId());
@@ -75,9 +75,63 @@ public class BucketTreeImpl implements BucketTree {
 		}
 	}
 
+	private void bubbleUpChange(BucketTreeUpdateInfo updateInfo, HashBucket hb, HashEngine he)
+			throws IllegalStateException, UnsupportedEncodingException {
+		HashBucket child = hb;
+		Long parentOID = hb.getParentHashBucketOID();
+		while (parentOID != null) {
+			HashBucket parent = getBucket(updateInfo, parentOID);
+			if (child.getEntriesUsed() == 0) {
+				parent.removeEntry(child.getId());
+			} else {
+				parent.updateEntry(child.getId(), child.getHashValue());
+			}
+			parent.setHashValue(parent.getEncryptedHashValue(he));
+			updateInfo.setChangedBucket(parent);
+			child = parent;
+			parentOID = parent.getParentHashBucketOID();
+		}
+	}
+
+	private HashBucket getBucket(BucketTreeUpdateInfo updateInfo, Long oid) {
+		HashBucket hb = updateInfo.getBucketsToUpdate().get(oid);
+		if (hb == null) {
+			hb = hRepo.findOne(oid);
+		}
+		return hb;
+	}
+
+	private HashBucket getMaxBucketForLevel(BucketTreeUpdateInfo updateInfo, Long level) {
+		Long maxOID = 0L;
+		HashBucket maxBucket = null;
+		for (Long oid : updateInfo.getBucketsToUpdate().keySet()) {
+			HashBucket hb = updateInfo.getBucketsToUpdate().get(oid);
+			if (hb.getBucketLevel().equals(level)) {
+				if (oid > maxOID) {
+					maxOID = oid;
+					maxBucket = hb;
+				}
+			}
+		}
+		if (maxBucket == null) {
+			maxBucket = hRepo.getLastBucketForLevel(level);
+		}
+		return maxBucket;
+	}
+
 	public void removeEntry(BucketTreeUpdateInfo updateInfo, Long oid, Long bucketID, HashEngine he)
 			throws IllegalStateException, UnsupportedEncodingException {
 
+		HashBucket hb = getBucket(updateInfo, bucketID);
+
+		if (hb == null) {
+			throw new RuntimeException("Bucket with OID:" + bucketID + " not found!!");
+		}
+
+		hb.removeEntry(oid);
+		hb.setHashValue(hb.getEncryptedHashValue(he));
+		updateInfo.setChangedBucket(hb);
+		bubbleUpChange(updateInfo, hb, he);
 	}
 
 	public void commit(BucketTreeUpdateInfo updateInfo) {

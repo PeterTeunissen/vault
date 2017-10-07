@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import com.pt.vault.data.AuditRecord;
 import com.pt.vault.data.HashBucket;
 import com.pt.vault.data.SequenceGen;
+import com.pt.vault.data.TamperError.RecordType;
 import com.pt.vault.repo.AuditRecordRepository;
 import com.pt.vault.repo.HashBucketRepository;
 import com.pt.vault.repo.SequenceGenRepo;
@@ -122,4 +123,41 @@ public class UIController {
 		}
 		return db;
 	}
+
+	@RequestMapping("/hbtamper")
+	@ResponseBody
+	public Object hbtamper() {
+		for (HashBucket hb : hRepo.findAll()) {
+			hb.setHashValue(hb.getHashValue() + " ** Tamper **");
+			hRepo.save(hb);
+			break;
+		}
+
+		return dump();
+	}
+
+	@RequestMapping("/artamper")
+	@ResponseBody
+	public Object artamper() {
+		for (AuditRecord ar : aRepo.findAll()) {
+			ar.setHashValue(ar.getHashValue() + " ** Tamper **");
+			aRepo.save(ar);
+			break;
+		}
+
+		return dump();
+	}
+
+	@RequestMapping("/arFixTamper")
+	@ResponseBody
+	public Object arFixTampering(@RequestParam(name = "oid", defaultValue = "", required = true) Long oid,
+			@RequestParam(name = "recordType", defaultValue = "", required = true) RecordType recordType,
+			@RequestParam(name = "key", defaultValue = "", required = true) String key,
+			@RequestParam(name = "encryptedKey", defaultValue = "", required = true) String encryptedKey)
+			throws IllegalStateException, UnsupportedEncodingException {
+
+		vault.fixTampering(oid, recordType, key, encryptedKey);
+		return checkTamper();
+	}
+
 }

@@ -3,6 +3,8 @@ package com.pt.vault.data;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 public class SequenceGen {
 
@@ -43,6 +45,7 @@ public class SequenceGen {
 		this.lastUsed = lastUsed;
 	}
 
+	@JsonIgnore
 	public Long getNextNum() {
 		lastUsed++;
 		return lastUsed;
