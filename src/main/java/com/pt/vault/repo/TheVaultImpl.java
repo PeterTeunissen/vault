@@ -2,7 +2,9 @@ package com.pt.vault.repo;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -136,90 +138,123 @@ public class TheVaultImpl implements TheVault {
 	// as a sample. Doing the entire database can take a very long time once we
 	// load 100000s of records.
 	public List<TamperError> checkForTampering() throws IllegalStateException, UnsupportedEncodingException {
+		List<Long> arOIDs = aRepo.getAllIds();
+		return checkForTampering(arOIDs);
+	}
+
+	public List<TamperError> checkForTampering(List<Long> auditRecordOIDs)
+			throws IllegalStateException, UnsupportedEncodingException {
+
 		List<TamperError> checkResult = new ArrayList<TamperError>();
-		// Check all audit record hashes are still correct
-		for (AuditRecord ar : aRepo.findAll()) {
-			if (!ar.getEncryptedHashValue(he).equals(ar.getHashValue())) {
-				checkResult.add(new TamperError(RecordType.AUDIT_RECORD, ErrorType.AUDIT_RECORD_HASH_FAIL,
-						"Audit Record check on hashValue failed!! " + ar.toString(), ar.getId()));
+		Set<Long> bucketsToCheck = new HashSet<Long>();
+
+		for (Long arOID : auditRecordOIDs) {
+			AuditRecord ar = aRepo.findOne(arOID);
+			if (ar == null) {
+				throw new RuntimeException(
+						"The passed-in AuditRecord oid (" + arOID + ") does not point to an AuditRecord!!");
 			}
-			// Check that each Audit Record still points to an existing hash
-			// bucket
-			if (ar.getHashBucketOID() == null) {
-				checkResult.add(new TamperError(RecordType.AUDIT_RECORD, ErrorType.AUDIT_RECORD_NO_HASH_BUCKET,
-						"Audit Record does not point to a Hash Bucket!! " + ar.toString(), ar.getId()));
-			} else if (!hRepo.hashBucketExists(ar.getHashBucketOID())) {
+
+			checkResult.addAll(checkAuditRecordt(ar, bucketsToCheck));
+		}
+
+		for (Long bucketOID : bucketsToCheck) {
+			HashBucket hb = hRepo.findOne(bucketOID);
+			if (hb == null) {
+				throw new RuntimeException(
+						"The passed-in HashBucket oid (" + bucketOID + ") does not point to a HashBucket!!");
+			}
+			checkResult.addAll(checkBucket(hb));
+		}
+		return checkResult;
+	}
+
+	private List<TamperError> checkAuditRecordt(AuditRecord ar, Set<Long> bucketsToCheck)
+			throws IllegalStateException, UnsupportedEncodingException {
+		List<TamperError> checkResult = new ArrayList<TamperError>();
+		if (!ar.getEncryptedHashValue(he).equals(ar.getHashValue())) {
+			checkResult.add(new TamperError(RecordType.AUDIT_RECORD, ErrorType.AUDIT_RECORD_HASH_FAIL,
+					"Audit Record check on hashValue failed!! " + ar.toString(), ar.getId()));
+		}
+		// Check that each Audit Record still points to an existing hash
+		// bucket
+		if (ar.getHashBucketOID() == null) {
+			checkResult.add(new TamperError(RecordType.AUDIT_RECORD, ErrorType.AUDIT_RECORD_NO_HASH_BUCKET,
+					"Audit Record does not point to a Hash Bucket!! " + ar.toString(), ar.getId()));
+		} else {
+			bucketsToCheck.add(ar.getHashBucketOID());
+			if (!hRepo.hashBucketExists(ar.getHashBucketOID())) {
 				checkResult
 						.add(new TamperError(RecordType.AUDIT_RECORD, ErrorType.AUDIT_RECORD_NON_EXISTING_HASH_BUCKET,
 								"Audit Record points to non-existing bucket!! " + ar.toString(), ar.getId()));
 			}
 		}
-		// Check all hash bucket hashes are still correct
-		for (HashBucket hb : hRepo.findAll()) {
-			// Check hash values
-			if (!hb.getEncryptedHashValue(he).equals(hb.getHashValue())) {
-				checkResult.add(new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_HASH_FAIL,
-						"Hash Bucket check on hashValue failed!! " + hb.toString(), hb.getId()));
+		return checkResult;
+	}
+
+	private List<TamperError> checkBucket(HashBucket hb) throws IllegalStateException, UnsupportedEncodingException {
+		List<TamperError> checkResult = new ArrayList<TamperError>();
+		// Check hash values
+		if (!hb.getEncryptedHashValue(he).equals(hb.getHashValue())) {
+			checkResult.add(new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_HASH_FAIL,
+					"Hash Bucket check on hashValue failed!! " + hb.toString(), hb.getId()));
+		}
+		// If this Hash Bucket points to another Hash Bucket, it needs to
+		// exists.
+		if (hb.getParentHashBucketOID() != null) {
+			if (!hRepo.hashBucketExists(hb.getParentHashBucketOID())) {
+				checkResult.add(new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_NON_EXISTING_PARENT,
+						"Hash Bucket references a parent Hash Bucket that does not exist!! " + hb.toString(),
+						hb.getId()));
 			}
-			// If this Hash Bucket points to another Hash Bucket, it needs to
+		}
+
+		// This list will be a list of referenced AuditRecords or
+		// HashBuckets
+		List<Long> oids = hb.getReferencedOIDs();
+
+		if (hb.getBucketLevel() == null) {
+			// Nothing todo... this is valid
+		} else if (hb.getBucketLevel() == 1L) {
+			// Check that each Audit Record mentioned in a Hash Bucket still
 			// exists.
-			if (hb.getParentHashBucketOID() != null) {
-				if (!hRepo.hashBucketExists(hb.getParentHashBucketOID())) {
-					checkResult.add(new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_NON_EXISTING_PARENT,
-							"Hash Bucket references a parent Hash Bucket that does not exist!! " + hb.toString(),
-							hb.getId()));
+			for (Long arOID : oids) {
+				if (!aRepo.auditRecordExists(arOID)) {
+					checkResult.add(
+							new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_NON_EXISTING_AUDIT_RECORD,
+									"Hash Bucket points to non-existing Audit Record!! " + hb.toString(), hb.getId()));
+
+				} else {
+					AuditRecord ar = aRepo.findOne(arOID);
+					if (!ar.getHashValue().equals(hb.getHashValueOfOid(arOID))) {
+						checkResult.add(new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_REF_HASH_NOT_SAME,
+								"Hash Bucket's entry hash does not match Audit Record hash (for ARoid=" + arOID + ") "
+										+ hb.toString(),
+								hb.getId()));
+					}
 				}
 			}
-
-			// This list will be a list of referenced AuditRecords or
-			// HashBuckets
-			List<Long> oids = hb.getReferencedOIDs();
-
-			if (hb.getBucketLevel() == null) {
-				// Nothing todo... this is valid
-			} else if (hb.getBucketLevel() == 1L) {
-				// Check that each Audit Record mentioned in a Hash Bucket still
-				// exists.
-				for (Long arOID : oids) {
-					if (!aRepo.auditRecordExists(arOID)) {
-						checkResult.add(new TamperError(RecordType.HASH_BUCKET,
-								ErrorType.HASH_BUCKET_NON_EXISTING_AUDIT_RECORD,
-								"Hash Bucket points to non-existing Audit Record!! " + hb.toString(), hb.getId()));
-
-					} else {
-						AuditRecord ar = aRepo.findOne(arOID);
-						if (!ar.getHashValue().equals(hb.getHashValueOfOid(arOID))) {
-							checkResult.add(
-									new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_REF_HASH_NOT_SAME,
-											"Hash Bucket's entry hash does not match Audit Record hash (for ARoid="
-													+ arOID + ") " + hb.toString(),
-											hb.getId()));
-						}
-					}
-				}
-			} else if (hb.getBucketLevel() > 1L) {
-				// Check that each Hash Bucket mentioned in a non-level-1 Hash
-				// Bucket still exists.
-				for (Long hbOID : oids) {
-					if (!hRepo.hashBucketExists(hbOID)) {
-						checkResult.add(new TamperError(RecordType.HASH_BUCKET,
-								ErrorType.HASH_BUCKET_NON_EXISTING_CHILD,
-								"Hash Bucket points to non-existing higher level Hash Bucket!! " + hb.toString(),
+		} else if (hb.getBucketLevel() > 1L) {
+			// Check that each Hash Bucket mentioned in a non-level-1 Hash
+			// Bucket still exists.
+			for (Long hbOID : oids) {
+				if (!hRepo.hashBucketExists(hbOID)) {
+					checkResult.add(new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_NON_EXISTING_CHILD,
+							"Hash Bucket points to non-existing higher level Hash Bucket!! " + hb.toString(),
+							hb.getId()));
+				} else {
+					HashBucket hbr = hRepo.findOne(hbOID);
+					if (!hbr.getHashValue().equals(hb.getHashValueOfOid(hbOID))) {
+						checkResult.add(new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_REF_HASH_NOT_SAME,
+								"Hash Bucket's entry hash does not match child Bucket hash (for HBoid=" + hbOID + ") "
+										+ hb.toString(),
 								hb.getId()));
-					} else {
-						HashBucket hbr = hRepo.findOne(hbOID);
-						if (!hbr.getHashValue().equals(hb.getHashValueOfOid(hbOID))) {
-							checkResult.add(
-									new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_REF_HASH_NOT_SAME,
-											"Hash Bucket's entry hash does not match child Bucket hash (for HBoid="
-													+ hbOID + ") " + hb.toString(),
-											hb.getId()));
-						}
-
 					}
+
 				}
 			}
 		}
+
 		return checkResult;
 	}
 

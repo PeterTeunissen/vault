@@ -5,11 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.pt.vault.data.AuditRecord;
 import com.pt.vault.data.HashBucket;
@@ -20,8 +19,8 @@ import com.pt.vault.repo.HashBucketRepository;
 import com.pt.vault.repo.SequenceGenRepo;
 import com.pt.vault.repo.TheVaultImpl;
 
-@Component
-@Controller
+@RestController
+@RequestMapping("/vault")
 public class UIController {
 
 	@Autowired
@@ -36,8 +35,7 @@ public class UIController {
 	@Autowired
 	private TheVaultImpl vault;
 
-	@RequestMapping("/buckets")
-	@ResponseBody
+	@RequestMapping(value = "/buckets", method = RequestMethod.GET)
 	public List<HashBucket> getBuckets() {
 		List<HashBucket> allBuckets = new ArrayList<HashBucket>();
 		for (HashBucket hb : hRepo.findAll()) {
@@ -46,8 +44,7 @@ public class UIController {
 		return allBuckets;
 	}
 
-	@RequestMapping("/records")
-	@ResponseBody
+	@RequestMapping(value = "/records", method = RequestMethod.GET)
 	public List<AuditRecord> getAuditRecord() {
 		List<AuditRecord> allRecords = new ArrayList<AuditRecord>();
 		for (AuditRecord ar : aRepo.findAll()) {
@@ -57,8 +54,7 @@ public class UIController {
 
 	}
 
-	@RequestMapping("/check")
-	@ResponseBody
+	@RequestMapping(value = "/check", method = RequestMethod.GET)
 	public Object checkTamper() {
 		try {
 			return vault.checkForTampering();
@@ -68,8 +64,7 @@ public class UIController {
 		return false;
 	}
 
-	@RequestMapping("/addData")
-	@ResponseBody
+	@RequestMapping(value = "/addData", method = RequestMethod.GET)
 	public Object addRecord(@RequestParam(defaultValue = "", required = true, name = "data") String auditData)
 			throws Exception {
 		AuditRecord ar = new AuditRecord();
@@ -78,8 +73,7 @@ public class UIController {
 		return dump();
 	}
 
-	@RequestMapping("/addSimpleData")
-	@ResponseBody
+	@RequestMapping(value = "/addSimpleData", method = RequestMethod.GET)
 	public Object addSimpleRecord(@RequestParam(defaultValue = "", required = true, name = "data") String auditData)
 			throws Exception {
 		AuditRecord ar = new AuditRecord();
@@ -88,16 +82,14 @@ public class UIController {
 		return a;
 	}
 
-	@RequestMapping("/removeRecord")
-	@ResponseBody
+	@RequestMapping(value = "/removeRecord", method = RequestMethod.GET)
 	public Object removeRecord(@RequestParam(defaultValue = "", required = true, name = "oid") Long oid)
 			throws IllegalStateException, UnsupportedEncodingException {
 		vault.removeAuditRecord(oid);
 		return dump();
 	}
 
-	@RequestMapping("/removeAll")
-	@ResponseBody
+	@RequestMapping(value = "/removeAll", method = RequestMethod.GET)
 	public Object removeRecord(@RequestParam(defaultValue = "", required = true, name = "confirm") String confirm)
 			throws IllegalStateException, UnsupportedEncodingException {
 		if (confirm.equals("Yes")) {
@@ -108,8 +100,7 @@ public class UIController {
 		return dump();
 	}
 
-	@RequestMapping("/dump")
-	@ResponseBody
+	@RequestMapping(value = "/dump", method = RequestMethod.GET)
 	public List<Object> dump() {
 		List<Object> db = new ArrayList<Object>();
 		for (AuditRecord ar : aRepo.findAll()) {
@@ -124,8 +115,7 @@ public class UIController {
 		return db;
 	}
 
-	@RequestMapping("/hbtamper")
-	@ResponseBody
+	@RequestMapping(value = "/hbtamper", method = RequestMethod.GET)
 	public Object hbtamper() {
 		for (HashBucket hb : hRepo.findAll()) {
 			hb.setHashValue(hb.getHashValue() + " ** Tamper **");
@@ -136,8 +126,7 @@ public class UIController {
 		return dump();
 	}
 
-	@RequestMapping("/artamper")
-	@ResponseBody
+	@RequestMapping(value = "/artamper", method = RequestMethod.GET)
 	public Object artamper() {
 		for (AuditRecord ar : aRepo.findAll()) {
 			ar.setHashValue(ar.getHashValue() + " ** Tamper **");
@@ -148,8 +137,7 @@ public class UIController {
 		return dump();
 	}
 
-	@RequestMapping("/arFixTamper")
-	@ResponseBody
+	@RequestMapping(value = "/arFixTamper", method = RequestMethod.POST)
 	public Object arFixTampering(@RequestParam(name = "oid", defaultValue = "", required = true) Long oid,
 			@RequestParam(name = "recordType", defaultValue = "", required = true) RecordType recordType,
 			@RequestParam(name = "key", defaultValue = "", required = true) String key,

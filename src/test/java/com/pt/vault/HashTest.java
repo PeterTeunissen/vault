@@ -3,10 +3,12 @@ package com.pt.vault;
 import java.io.UnsupportedEncodingException;
 import java.util.Random;
 
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.junit.Test;
 
 import com.pt.vault.hasher.HashEngine;
 import com.pt.vault.hasher.PlainHasherImpl;
+import com.pt.vault.hasher.SecretHasherImpl;
 
 public class HashTest {
 
@@ -24,5 +26,27 @@ public class HashTest {
 		String e = h.getSecretHash(keys.toString());
 		System.out.println("Done making hash:" + (System.currentTimeMillis() - s));
 
+	}
+
+	@Test
+	public void testCommonsHasher() {
+		HashCodeBuilder bldr = new HashCodeBuilder(17, 37);
+		bldr.append("a");
+		bldr.append("b");
+		int ab = bldr.toHashCode();
+
+		bldr = new HashCodeBuilder(17, 37);
+		bldr.append("b");
+		bldr.append("a");
+		int ba = bldr.toHashCode();
+
+		System.out.println(ab + " " + ba);
+	}
+
+	@Test
+	public void testSecretHasher() throws IllegalStateException, UnsupportedEncodingException {
+		SecretHasherImpl h = new SecretHasherImpl("OK");
+		System.out.println(h.getSecretHash("one"));
+		System.out.println(h.getSecretHash("one"));
 	}
 }

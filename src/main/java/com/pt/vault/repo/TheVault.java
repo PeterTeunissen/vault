@@ -24,6 +24,9 @@ public interface TheVault {
 
 	public List<TamperError> checkForTampering() throws IllegalStateException, UnsupportedEncodingException;
 
+	public List<TamperError> checkForTampering(List<Long> auditRecordOIDs)
+			throws IllegalStateException, UnsupportedEncodingException;
+
 	public void fixTampering(Long oid, RecordType recordType, String key, String encryptedKey)
 			throws IllegalStateException, UnsupportedEncodingException;
 }
