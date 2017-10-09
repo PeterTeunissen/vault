@@ -138,11 +138,22 @@ public class TheVaultImpl implements TheVault {
 	// as a sample. Doing the entire database can take a very long time once we
 	// load 100000s of records.
 	public List<TamperError> checkForTampering() throws IllegalStateException, UnsupportedEncodingException {
+		List<TamperError> checkResult = new ArrayList<TamperError>();
 		List<Long> arOIDs = aRepo.getAllIds();
-		return checkForTampering(arOIDs);
+		Set<Long> checkedBuckets = new HashSet<Long>();
+		checkResult.addAll(checkForTampering(arOIDs, true));
+		for (HashBucket hb : hRepo.findAll()) {
+			checkResult.addAll(checkBucket(hb, checkedBuckets));
+		}
+		return checkResult;
 	}
 
 	public List<TamperError> checkForTampering(List<Long> auditRecordOIDs)
+			throws IllegalStateException, UnsupportedEncodingException {
+		return checkForTampering(auditRecordOIDs, false);
+	}
+
+	private List<TamperError> checkForTampering(List<Long> auditRecordOIDs, boolean skipBuckets)
 			throws IllegalStateException, UnsupportedEncodingException {
 
 		List<TamperError> checkResult = new ArrayList<TamperError>();
@@ -154,28 +165,39 @@ public class TheVaultImpl implements TheVault {
 				throw new RuntimeException(
 						"The passed-in AuditRecord oid (" + arOID + ") does not point to an AuditRecord!!");
 			}
-
 			checkResult.addAll(checkAuditRecordt(ar, bucketsToCheck));
 		}
 
-		for (Long bucketOID : bucketsToCheck) {
-			HashBucket hb = hRepo.findOne(bucketOID);
-			if (hb == null) {
-				throw new RuntimeException(
-						"The passed-in HashBucket oid (" + bucketOID + ") does not point to a HashBucket!!");
+		if (!skipBuckets) {
+			Set<Long> checkedBuckets = new HashSet<Long>();
+			while (bucketsToCheck.size() > 0) {
+				Set<Long> moreBucketsToCheck = new HashSet<Long>();
+				for (Long bucketOID : bucketsToCheck) {
+					if (!checkedBuckets.contains(bucketOID)) {
+						HashBucket hb = hRepo.findOne(bucketOID);
+						if (hb == null) {
+							throw new RuntimeException("The passed-in HashBucket oid (" + bucketOID
+									+ ") does not point to a HashBucket!!");
+						}
+						checkResult.addAll(checkBucket(hb, moreBucketsToCheck));
+					}
+				}
+				bucketsToCheck = moreBucketsToCheck;
 			}
-			checkResult.addAll(checkBucket(hb));
 		}
 		return checkResult;
 	}
 
 	private List<TamperError> checkAuditRecordt(AuditRecord ar, Set<Long> bucketsToCheck)
 			throws IllegalStateException, UnsupportedEncodingException {
+
 		List<TamperError> checkResult = new ArrayList<TamperError>();
+
 		if (!ar.getEncryptedHashValue(he).equals(ar.getHashValue())) {
 			checkResult.add(new TamperError(RecordType.AUDIT_RECORD, ErrorType.AUDIT_RECORD_HASH_FAIL,
 					"Audit Record check on hashValue failed!! " + ar.toString(), ar.getId()));
 		}
+
 		// Check that each Audit Record still points to an existing hash
 		// bucket
 		if (ar.getHashBucketOID() == null) {
@@ -192,8 +214,11 @@ public class TheVaultImpl implements TheVault {
 		return checkResult;
 	}
 
-	private List<TamperError> checkBucket(HashBucket hb) throws IllegalStateException, UnsupportedEncodingException {
+	private List<TamperError> checkBucket(HashBucket hb, Set<Long> moreBucketsToCheck)
+			throws IllegalStateException, UnsupportedEncodingException {
+
 		List<TamperError> checkResult = new ArrayList<TamperError>();
+
 		// Check hash values
 		if (!hb.getEncryptedHashValue(he).equals(hb.getHashValue())) {
 			checkResult.add(new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_HASH_FAIL,
@@ -202,6 +227,7 @@ public class TheVaultImpl implements TheVault {
 		// If this Hash Bucket points to another Hash Bucket, it needs to
 		// exists.
 		if (hb.getParentHashBucketOID() != null) {
+			moreBucketsToCheck.add(hb.getParentHashBucketOID());
 			if (!hRepo.hashBucketExists(hb.getParentHashBucketOID())) {
 				checkResult.add(new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_NON_EXISTING_PARENT,
 						"Hash Bucket references a parent Hash Bucket that does not exist!! " + hb.toString(),
@@ -238,19 +264,18 @@ public class TheVaultImpl implements TheVault {
 			// Check that each Hash Bucket mentioned in a non-level-1 Hash
 			// Bucket still exists.
 			for (Long hbOID : oids) {
-				if (!hRepo.hashBucketExists(hbOID)) {
+				HashBucket hbr = hRepo.findOne(hbOID);
+				if (hbr == null) {
 					checkResult.add(new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_NON_EXISTING_CHILD,
 							"Hash Bucket points to non-existing higher level Hash Bucket!! " + hb.toString(),
 							hb.getId()));
 				} else {
-					HashBucket hbr = hRepo.findOne(hbOID);
 					if (!hbr.getHashValue().equals(hb.getHashValueOfOid(hbOID))) {
 						checkResult.add(new TamperError(RecordType.HASH_BUCKET, ErrorType.HASH_BUCKET_REF_HASH_NOT_SAME,
 								"Hash Bucket's entry hash does not match child Bucket hash (for HBoid=" + hbOID + ") "
 										+ hb.toString(),
 								hb.getId()));
 					}
-
 				}
 			}
 		}
@@ -278,6 +303,5 @@ public class TheVaultImpl implements TheVault {
 			// TBD
 			// THis is more tricky...
 		}
-
 	}
 }

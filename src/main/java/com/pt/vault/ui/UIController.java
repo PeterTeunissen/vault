@@ -59,9 +59,17 @@ public class UIController {
 		try {
 			return vault.checkForTampering();
 		} catch (Exception e) {
-			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
-		return false;
+	}
+
+	@RequestMapping(value = "/checkAuditRecords", method = RequestMethod.GET)
+	public Object checkSomeTamper(@RequestParam(defaultValue = "", required = true, name = "oids") List<Long> oids) {
+		try {
+			return vault.checkForTampering(oids);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@RequestMapping(value = "/addData", method = RequestMethod.GET)

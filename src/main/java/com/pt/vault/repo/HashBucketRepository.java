@@ -1,5 +1,7 @@
 package com.pt.vault.repo;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
@@ -18,4 +20,8 @@ public interface HashBucketRepository extends CrudRepository<HashBucket, Long> {
 
 	@Query("SELECT hb FROM HashBucket hb where hb.id = (select max(hb.id) FROM HashBucket hb where hb.bucketLevel=:level)")
 	HashBucket getLastBucketForLevel(@Param("level") Long level);
+
+	@Query("SELECT id FROM HashBucket hb")
+	List<Long> getAllIds();
+
 }
